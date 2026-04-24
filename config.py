@@ -1,9 +1,9 @@
-"""Central configuration: paths and retrieval defaults.
+"""Central configuration: paths, retrieval defaults, and LLM provider settings.
 
 Rubric: modular design; future experiments can override via env or CLI.
 
-Secrets: put `OPENAI_API_KEY` (and `OPENAI_BASE_URL` for LiteLLM) in `.env` at the
-project root (gitignored). Copy `.env.example` → `.env` — never commit keys or tokens.
+Secrets and provider settings should live in `.env` at the project root
+(gitignored). Copy `.env.example` -> `.env` and edit locally.
 """
 
 from __future__ import annotations
@@ -12,23 +12,27 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
+from openai import OpenAI
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 DATA_DIR = PROJECT_ROOT / "data"
 ACTIVITIES_PATH = DATA_DIR / "activities.json"
 
-# Load `.env` so local runs pick up OPENAI_* without exporting in the shell.
 load_dotenv(PROJECT_ROOT / ".env")
 
-# --- LLM via OpenAI-compatible API (Duke LiteLLM proxy or api.openai.com) ---
-# LiteLLM exposes POST /v1/chat/completions like OpenAI; set OPENAI_BASE_URL in `.env`.
-# Model id must match what your proxy returns from GET /v1/models (not always public names).
-# Default: mid-tier — avoid cheapest nano; avoid flagship cost for daily ~$1 budgets.
-OPENAI_API_KEY: str | None = os.getenv("OPENAI_API_KEY") or None
-OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4.1")
-OPENAI_BASE_URL: str | None = os.getenv("OPENAI_BASE_URL") or None
+# --- LLM config (provider-agnostic) ---
+# Default is local Ollama to avoid API spend.
+LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "ollama").strip().lower()
+LLM_MODEL: str = os.getenv("LLM_MODEL", "mistral:7b-instruct").strip()
+LLM_BASE_URL: str = os.getenv("LLM_BASE_URL", "http://localhost:11434/v1").strip().rstrip("/")
+LLM_API_KEY: str | None = os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY") or None
 
-# Dense retrieval — small, fast baseline; compare to a larger model in experiments/.
+# Back-compat aliases (older config references).
+OPENAI_API_KEY: str | None = LLM_API_KEY
+OPENAI_MODEL: str = LLM_MODEL
+OPENAI_BASE_URL: str | None = LLM_BASE_URL
+
+# Dense retrieval — small, fast baseline; compare to larger models in experiments/.
 EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
 # Hybrid scoring: convex combination of dense similarity and sparse keyword overlap.
@@ -38,25 +42,32 @@ HYBRID_KEYWORD_WEIGHT = 0.28
 DEFAULT_TOP_K = 8
 
 
-def openai_key_configured() -> bool:
-    return bool(OPENAI_API_KEY and OPENAI_API_KEY.strip())
+def llm_key_configured() -> bool:
+    if LLM_PROVIDER == "ollama":
+        return True
+    return bool(LLM_API_KEY and LLM_API_KEY.strip())
 
 
-def openai_client():
+def llm_client() -> OpenAI:
+    """OpenAI-compatible client for Ollama, LiteLLM, or API providers.
+
+    Providers:
+    - ollama: local server at `http://localhost:11434/v1` (default key placeholder)
+    - openai_compatible: any OpenAI-style endpoint requiring a bearer token
     """
-    Shared OpenAI SDK client pointing at LiteLLM or direct OpenAI.
-
-    Usage:
-        client = openai_client()
-        r = client.chat.completions.create(model=config.OPENAI_MODEL, messages=[...])
-    """
-    if not openai_key_configured():
-        raise RuntimeError(
-            "OPENAI_API_KEY is missing. Copy .env.example to .env and set your key."
+    provider = LLM_PROVIDER
+    if provider == "ollama":
+        # Ollama's OpenAI-compatible endpoint accepts placeholder auth values.
+        api_key = (LLM_API_KEY or "ollama").strip() or "ollama"
+    elif provider == "openai_compatible":
+        if not llm_key_configured():
+            raise RuntimeError(
+                "LLM_API_KEY (or OPENAI_API_KEY) is required for openai_compatible provider."
+            )
+        api_key = LLM_API_KEY.strip()  # type: ignore[union-attr]
+    else:
+        raise ValueError(
+            f"Unsupported LLM_PROVIDER={provider!r}. Use 'ollama' or 'openai_compatible'."
         )
-    from openai import OpenAI
 
-    kwargs: dict = {"api_key": OPENAI_API_KEY.strip()}
-    if OPENAI_BASE_URL and OPENAI_BASE_URL.strip():
-        kwargs["base_url"] = OPENAI_BASE_URL.strip().rstrip("/")
-    return OpenAI(**kwargs)
+    return OpenAI(api_key=api_key, base_url=LLM_BASE_URL)

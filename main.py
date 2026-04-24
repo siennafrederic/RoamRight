@@ -19,6 +19,7 @@ if str(ROOT) not in sys.path:
 import config as cfg
 from data.preprocess import load_and_preprocess
 from models.user_input import GroupType, TravelPreferences, TravelStyle, TripRequest
+from pipeline.rag import run_rag
 from retrieval.embedder import Embedder
 from retrieval.retriever import ActivityRetriever
 
@@ -47,12 +48,12 @@ def main() -> None:
         group_type=GroupType.COUPLE,
     )
 
-    q = trip.retrieval_query_text()
+    rag = run_rag(trip=trip, retriever=retriever, top_k=5)
     print("--- Retrieval query (structured user intent chunk) ---")
-    print(q)
+    print(rag.query_text)
     print("\n--- Top-k hybrid hits (Paris only) ---\n")
 
-    for i, hit in enumerate(retriever.retrieve(q, top_k=5, city_filter="Paris"), start=1):
+    for i, hit in enumerate(rag.hits, start=1):
         a = hit.activity
         print(f"{i}. {a.name} [{a.category}]")
         print(f"   hybrid={hit.hybrid_score:.3f}  dense={hit.dense_score:.3f}  kw={hit.keyword_score:.3f}")
