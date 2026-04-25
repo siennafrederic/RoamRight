@@ -116,9 +116,51 @@ def _extract_days_json_count(text: str) -> int | None:
     return None
 
 
-def _has_empty_slots(text: str) -> bool:
-    # Cheap check for obvious empty json slot values.
-    return '"morning": ""' in text or '"afternoon": ""' in text or '"evening": ""' in text
+def _required_slots_for_day(trip: TripRequest, day_index: int) -> dict[str, bool]:
+    required = {"morning": True, "afternoon": True, "evening": True}
+    total = trip.trip_length_days()
+    if day_index == 1 and trip.arrival_datetime:
+        h = trip.arrival_datetime.hour
+        if h >= 12:
+            required["morning"] = False
+        if h >= 17:
+            required["afternoon"] = False
+    if day_index == total and trip.departure_datetime:
+        h = trip.departure_datetime.hour
+        if h <= 16:
+            required["evening"] = False
+        if h <= 12:
+            required["afternoon"] = False
+    return required
+
+
+def _has_invalid_slots(text: str, trip: TripRequest) -> bool:
+    m = re.search(r"```json\s*(\{.*?\})\s*```", text, flags=re.S | re.I)
+    candidate = m.group(1) if m else None
+    if candidate is None:
+        m2 = re.search(r"(\{.*\})", text, flags=re.S)
+        candidate = m2.group(1) if m2 else None
+    if not candidate:
+        return False
+    try:
+        obj = json.loads(candidate)
+    except Exception:
+        return False
+    days = obj.get("days")
+    if not isinstance(days, list):
+        return False
+    expected_days = trip.trip_length_days()
+    if len(days) != expected_days:
+        return True
+    for idx, row in enumerate(days, start=1):
+        if not isinstance(row, dict):
+            return True
+        req = _required_slots_for_day(trip, idx)
+        for slot in ("morning", "afternoon", "evening"):
+            value = str(row.get(slot, "")).strip()
+            if req[slot] and not value:
+                return True
+    return False
 
 
 def generate_itinerary(
@@ -150,12 +192,12 @@ def generate_itinerary(
     needs_retry = False
     if parsed_count is not None and parsed_count != n_days:
         needs_retry = True
-    if _has_empty_slots(text):
+    if _has_invalid_slots(text, trip):
         needs_retry = True
     if needs_retry:
         correction = (
             f"Your previous output did not satisfy format constraints. "
-            f"Return exactly {n_days} days and ensure no empty morning/afternoon/evening fields."
+            f"Return exactly {n_days} days. For slots allowed by arrival/departure windows, do not leave them empty."
         )
         retry_messages = build_messages(
             prompt_variant,

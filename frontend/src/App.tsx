@@ -19,6 +19,8 @@ const initialRequest: PlanRequest = {
   destinationCountry: "Spain",
   startDate: "2026-06-10",
   endDate: "2026-06-14",
+  arrivalTime: "10:00",
+  departureTime: "20:00",
   travelStyle: "balanced",
   touristVsLocal: 40,
   walkingTolerance: 60,
@@ -111,6 +113,24 @@ export default function App() {
                 type="date"
                 value={request.endDate}
                 onChange={(e) => setRequest({ ...request, endDate: e.target.value })}
+                required
+              />
+            </label>
+            <label>
+              Arrival Time
+              <input
+                type="time"
+                value={request.arrivalTime}
+                onChange={(e) => setRequest({ ...request, arrivalTime: e.target.value })}
+                required
+              />
+            </label>
+            <label>
+              Departure Time
+              <input
+                type="time"
+                value={request.departureTime}
+                onChange={(e) => setRequest({ ...request, departureTime: e.target.value })}
                 required
               />
             </label>
@@ -214,7 +234,34 @@ export default function App() {
           {!result && <p className="empty">Generate a plan to see your itinerary here.</p>}
           {result && (
             <>
-              <pre className="itinerary">{result.itineraryText}</pre>
+              <div className="day-grid">
+                {result.days.map((d) => (
+                  <article className="day-card" key={`day-${d.day}`}>
+                    <h3>Day {d.day}</h3>
+                    <ul>
+                      <li>
+                        <strong>Morning:</strong> {d.morning}
+                      </li>
+                      <li>
+                        <strong>Afternoon:</strong> {d.afternoon}
+                      </li>
+                      <li>
+                        <strong>Evening:</strong> {d.evening}
+                      </li>
+                    </ul>
+                  </article>
+                ))}
+              </div>
+
+              <div className="explanation-box">
+                <h3>How This Trip Flows</h3>
+                <ul>
+                  {result.explanationBullets.map((line, i) => (
+                    <li key={`expl-${i}`}>{line}</li>
+                  ))}
+                </ul>
+              </div>
+
               <h3>Top Activity Picks</h3>
               <ul className="activity-list">
                 {result.topActivities.map((activity) => (

@@ -3,6 +3,8 @@ export type PlanRequest = {
   destinationCountry: string;
   startDate: string;
   endDate: string;
+  arrivalTime: string;
+  departureTime: string;
   travelStyle: "relaxed" | "balanced" | "packed";
   touristVsLocal: number;
   walkingTolerance: number;
@@ -11,7 +13,16 @@ export type PlanRequest = {
   notes: string;
 };
 
+export type DayPlan = {
+  day: number;
+  morning: string;
+  afternoon: string;
+  evening: string;
+};
+
 export type PlanResponse = {
+  days: DayPlan[];
+  explanationBullets: string[];
   itineraryText: string;
   topActivities: Array<{
     name: string;
