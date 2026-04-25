@@ -34,7 +34,7 @@ def format_hits_as_context(hits: list[RetrievalHit]) -> str:
         lines.append(
             (
                 f"{i}. {a.name} [{a.category}] in {a.neighborhood}, {a.city}\n"
-                f"   price_level={a.price_level} tags={', '.join(a.tags)}\n"
+                f"   tags={', '.join(a.tags)}\n"
                 f"   description={a.description}\n"
                 f"   scores: hybrid={h.hybrid_score:.3f}, dense={h.dense_score:.3f}, keyword={h.keyword_score:.3f}"
             )

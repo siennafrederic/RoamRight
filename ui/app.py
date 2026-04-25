@@ -42,8 +42,6 @@ def main() -> None:
             arrival_time = st.time_input("Arrival Time", value=time(10, 0))
             departure_date = st.date_input("Departure Date", value=date.today() + timedelta(days=18))
             departure_time = st.time_input("Departure Time", value=time(18, 0))
-            total_budget = st.number_input("Total Budget", min_value=0.0, value=1200.0, step=50.0)
-            budget_currency = st.selectbox("Currency", ["USD", "EUR", "GBP", "JPY"], index=0)
         with c2:
             travel_style = st.selectbox("Vacation Pace", ["relaxed", "balanced", "packed"], index=1)
             tourist_vs_local = st.slider("Touristy vs Local (0=local, 100=touristy)", 0, 100, 30)
@@ -60,17 +58,16 @@ def main() -> None:
                 default=["Food", "Nature"],
             )
 
-        st.markdown("### Constraints and Notes")
-        explicit_must_include = st.text_input("Must Include (comma-separated)", value="")
-        explicit_must_avoid = st.text_input("Must Avoid (comma-separated)", value="")
+        st.markdown("### Personalization Notes")
         extra_comments = st.text_area(
-            "Other Comments",
+            "Tell us anything else to personalize your trip",
             value=(
-                "Use + at line start for additional must-include items.\n"
-                "Use - at line start for must-avoid items.\n"
-                "Example: + Eiffel Tower at night"
+                "Examples:\n"
+                "- We love street food and hidden gems\n"
+                "- Avoid loud nightlife, prefer relaxed evenings\n"
+                "- We definitely want to see Sagrada Familia"
             ),
-            height=120,
+            height=140,
         )
         submitted = st.form_submit_button("Generate Itinerary")
 
@@ -85,8 +82,6 @@ def main() -> None:
             arrival_time=arrival_time,
             departure_date=departure_date,
             departure_time=departure_time,
-            total_budget=total_budget,
-            budget_currency=budget_currency,
             travel_style=travel_style,
             tourist_vs_local=tourist_vs_local,
             walking_tolerance=walking_tolerance,
@@ -94,8 +89,6 @@ def main() -> None:
             time_preference=time_preference,
             selected_interests=selected_interests,
             extra_comments=extra_comments,
-            explicit_must_include=explicit_must_include,
-            explicit_must_avoid=explicit_must_avoid,
         )
         pipeline = get_pipeline()
         known_cities = {a.city.lower() for a in pipeline.activities}
@@ -113,6 +106,7 @@ def main() -> None:
             trip=trip,
             ranked_hits=out.ranked_hits,
             events=out.events,
+            resolved_must_includes=out.resolved_must_includes,
             scheduled_items=out.scheduled_items,
             prompt_variant="json_then_explain",
         )
@@ -127,15 +121,11 @@ def main() -> None:
     st.subheader("Top Ranked Activities (Debug View)")
     for i, rh in enumerate(out.ranked_hits, start=1):
         a = rh.hit.activity
-        if a.price_min is not None or a.price_max is not None:
-            price_txt = f"{a.price_currency or ''} {a.price_min or '?'}-{a.price_max or '?'}"
-        else:
-            price_txt = f"price level {a.price_level}"
         st.markdown(
-            f"**{i}. {a.name}** ({a.category}, price={price_txt})  \n"
-            f"`final={rh.final_score:.3f} pref={rh.preference_score:.3f} budget={rh.budget_score:.3f} "
+            f"**{i}. {a.name}** ({a.category})  \n"
+            f"`final={rh.final_score:.3f} pref={rh.preference_score:.3f} "
             f"local={rh.local_tourist_score:.3f} walk={rh.walking_feasibility_score:.3f} "
-            f"div={rh.diversity_bonus:.3f} constraints={rh.include_exclude_score:.3f}`  \n"
+            f"div={rh.diversity_bonus:.3f}`  \n"
             f"{a.description}"
         )
 
@@ -144,9 +134,8 @@ def main() -> None:
         st.write("No events found for these dates in current sources.")
     else:
         for e in sorted(out.events, key=lambda x: x.start_datetime):
-            price = f"{e.price_currency or ''} {e.price_min or '?'}-{e.price_max or '?'}"
             st.markdown(
-                f"- **{e.name}** ({e.start_datetime.strftime('%Y-%m-%d %H:%M')}) at {e.venue or 'TBA'} | {price}"
+                f"- **{e.name}** ({e.start_datetime.strftime('%Y-%m-%d %H:%M')}) at {e.venue or 'TBA'}"
             )
 
     st.subheader("Timed Plan Draft")

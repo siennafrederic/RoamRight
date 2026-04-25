@@ -30,7 +30,6 @@ def _trip_constraints(trip: TripRequest) -> str:
         f"Dates: {trip.start_date.isoformat()} to {trip.end_date.isoformat()} ({days} days)\n"
         f"Arrival datetime: {arrival}\n"
         f"Departure datetime: {departure}\n"
-        f"Budget: {trip.budget_amount:.0f} {trip.budget_currency}\n"
         f"Travel style: {p.travel_style.value}\n"
         f"Interests: {p.interest_summary()}\n"
         f"Tourist vs local preference (0 local -> 1 touristy): {p.tourist_vs_local:.2f}\n"
@@ -65,7 +64,7 @@ def build_messages(
             "Create a day-by-day itinerary with sections for Morning, Afternoon, Evening.\n"
             f"Output exactly {n_days} days labeled Day 1 through Day {n_days}.\n"
             "Every day must have non-empty Morning, Afternoon, Evening suggestions.\n"
-            "Prioritize budget fit, local/tourist preference, and feasible pacing.\n"
+            "Prioritize local/tourist preference and feasible pacing.\n"
             "For each slot include: activity name and 1 sentence rationale.\n\n"
             "Trip constraints:\n"
             f"{constraints}\n\n"
@@ -80,7 +79,7 @@ def build_messages(
         )
         user = (
             "Draft a coherent itinerary narrative for the whole trip, split each day into "
-            "Morning/Afternoon/Evening bullets. Keep walking realistic and mention budget-aware choices.\n\n"
+            "Morning/Afternoon/Evening bullets. Keep walking realistic and avoid overpacking each day.\n\n"
             f"Include exactly {n_days} days, each with all three slots present.\n\n"
             "Constraints:\n"
             f"{constraints}\n\n"

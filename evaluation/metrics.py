@@ -18,30 +18,16 @@ from models.user_input import TripRequest
 class MetricBundle:
     relevance: float
     diversity: float
-    budget_adherence: float
 
     def as_dict(self) -> dict[str, float]:
         return {
             "relevance": round(self.relevance, 4),
             "diversity": round(self.diversity, 4),
-            "budget_adherence": round(self.budget_adherence, 4),
         }
 
 
 def _clip01(x: float) -> float:
     return max(0.0, min(1.0, x))
-
-
-def _target_price_level(trip: TripRequest) -> float:
-    days = (trip.end_date - trip.start_date).days + 1
-    per_day = trip.budget_amount / max(1, days)
-    if per_day < 90:
-        return 1.0
-    if per_day < 180:
-        return 2.0
-    if per_day < 320:
-        return 3.0
-    return 4.0
 
 
 def relevance_score(activities: list[Activity], trip: TripRequest) -> float:
@@ -76,17 +62,8 @@ def diversity_score(activities: list[Activity]) -> float:
     return _clip01(0.6 * cat_component + 0.4 * tag_component)
 
 
-def budget_adherence_score(activities: list[Activity], trip: TripRequest) -> float:
-    if not activities:
-        return 0.0
-    target = _target_price_level(trip)
-    avg_diff = sum(abs(a.price_level - target) for a in activities) / len(activities)
-    return _clip01(1.0 - avg_diff / 4.0)
-
-
 def evaluate_activity_set(activities: list[Activity], trip: TripRequest) -> MetricBundle:
     return MetricBundle(
         relevance=relevance_score(activities, trip),
         diversity=diversity_score(activities),
-        budget_adherence=budget_adherence_score(activities, trip),
     )

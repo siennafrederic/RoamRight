@@ -86,16 +86,14 @@ class TravelPreferences:
 
 @dataclass
 class TripRequest:
-    """Full trip specification: destination, dates, budget, and preferences."""
+    """Full trip specification: destination, dates, and preferences."""
 
     destination_city: str
     destination_country: str
     start_date: date
     end_date: date
-    budget_amount: float
     arrival_datetime: datetime | None = None
     departure_datetime: datetime | None = None
-    budget_currency: str = "USD"
     preferences: TravelPreferences = field(default_factory=TravelPreferences)
     group_type: GroupType = GroupType.SOLO
     must_include: list[str] = field(default_factory=list)
@@ -105,8 +103,6 @@ class TripRequest:
     def __post_init__(self) -> None:
         if self.end_date < self.start_date:
             raise ValueError("end_date must be on or after start_date")
-        if self.budget_amount < 0:
-            raise ValueError("budget_amount must be non-negative")
         if self.arrival_datetime and self.departure_datetime and self.departure_datetime < self.arrival_datetime:
             raise ValueError("departure_datetime must be after arrival_datetime")
         self.must_include = [x.strip() for x in self.must_include if x.strip()]
@@ -140,7 +136,6 @@ class TripRequest:
             f"Interests: {p.interest_summary()}. "
             f"Style: {style_note}. {local_note}. "
             f"Group: {group}. {walk}. "
-            f"Budget roughly {self.budget_amount:.0f} {self.budget_currency} for the trip. "
             f"Arrive {self.arrival_datetime.isoformat() if self.arrival_datetime else 'unspecified time'}. "
             f"Depart {self.departure_datetime.isoformat() if self.departure_datetime else 'unspecified time'}. "
             f"Must include: {', '.join(self.must_include) if self.must_include else 'none'}. "

@@ -123,7 +123,7 @@ def build_timed_schedule(trip: TripRequest, ranked_hits: list[RankedHit], events
                     end_time=e_end.strftime("%H:%M"),
                     title=e.name,
                     item_type="event",
-                    notes=f"{e.venue or 'venue TBA'} | {e.price_currency or ''} {e.price_min or '?'}-{e.price_max or '?'}",
+                    notes=f"{e.venue or 'venue TBA'}",
                 )
             )
     return items

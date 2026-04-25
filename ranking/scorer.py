@@ -2,7 +2,7 @@
 Ranking module for personalization after retrieval.
 
 Rubric support:
-- Feature engineering: explicit sub-scores (preference, budget, local/tourist, feasibility, diversity).
+- Feature engineering: explicit sub-scores (preference, local/tourist, feasibility, diversity).
 - Comparison/ablation ready: easy to disable or reweight components.
 """
 
@@ -19,31 +19,14 @@ from retrieval.retriever import RetrievalHit
 class RankedHit:
     hit: RetrievalHit
     preference_score: float
-    budget_score: float
     local_tourist_score: float
     walking_feasibility_score: float
     diversity_bonus: float
-    include_exclude_score: float
     final_score: float
 
 
 def _clip01(x: float) -> float:
     return max(0.0, min(1.0, x))
-
-
-def _price_level_from_budget(total_budget: float, trip_days: int) -> float:
-    """
-    Heuristic mapping from per-day budget to expected activity price level.
-    Output lives in [0, 4] to match dataset price_level convention.
-    """
-    per_day = total_budget / max(1, trip_days)
-    if per_day < 90:
-        return 1.0
-    if per_day < 180:
-        return 2.0
-    if per_day < 320:
-        return 3.0
-    return 4.0
 
 
 def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -70,24 +53,6 @@ def _preference_score(hit: RetrievalHit, trip: TripRequest) -> float:
             numer += w
     return _clip01(numer / denom) if denom > 0 else 0.5
 
-
-def _budget_score(hit: RetrievalHit, trip: TripRequest) -> float:
-    if hit.activity.price_min is not None:
-        days = (trip.end_date - trip.start_date).days + 1
-        target_daily = trip.budget_amount / max(1, days)
-        price = hit.activity.price_min
-        # If an item costs around one-third of daily budget, score high.
-        # Overly expensive items are penalized strongly.
-        target_item = max(10.0, target_daily / 3.0)
-        ratio = price / target_item
-        if ratio <= 1.0:
-            return _clip01(1.0 - 0.2 * (1.0 - ratio))
-        return _clip01(1.0 - (ratio - 1.0))
-    days = (trip.end_date - trip.start_date).days + 1
-    target = _price_level_from_budget(trip.budget_amount, days)
-    distance = abs(hit.activity.price_level - target)
-    # 0 diff => 1.0, 4 diff => 0.0
-    return _clip01(1.0 - distance / 4.0)
 
 
 def _local_tourist_score(hit: RetrievalHit, trip: TripRequest) -> float:
@@ -125,29 +90,6 @@ def _diversity_bonus(hit: RetrievalHit, selected: list[RankedHit]) -> float:
     return 0.6 * cat_bonus + 0.4 * tag_bonus
 
 
-def _include_exclude_score(hit: RetrievalHit, trip: TripRequest) -> float:
-    """
-    Soft constraint score:
-    - boost matches with must_include phrases
-    - strongly penalize matches with must_avoid phrases
-    """
-    text = " ".join(
-        [
-            hit.activity.name.lower(),
-            hit.activity.category.lower(),
-            hit.activity.description.lower(),
-            " ".join(hit.activity.tags),
-        ]
-    )
-    include_terms = [x.lower() for x in trip.must_include]
-    avoid_terms = [x.lower() for x in trip.must_avoid]
-    include_hits = sum(1 for t in include_terms if t in text) if include_terms else 0
-    avoid_hits = sum(1 for t in avoid_terms if t in text) if avoid_terms else 0
-    include_component = include_hits / max(1, len(include_terms)) if include_terms else 0.5
-    avoid_component = 1.0 - (avoid_hits / max(1, len(avoid_terms))) if avoid_terms else 1.0
-    return _clip01(0.65 * include_component + 0.35 * avoid_component)
-
-
 def rank_hits(hits: list[RetrievalHit], trip: TripRequest, top_k: int = 8) -> list[RankedHit]:
     """
     Greedy re-ranking with diversity-aware selection.
@@ -158,39 +100,31 @@ def rank_hits(hits: list[RetrievalHit], trip: TripRequest, top_k: int = 8) -> li
     # Weights can later be tuned and compared in experiments.
     w_retrieval = 0.25
     w_pref = 0.25
-    w_budget = 0.2
-    w_local = 0.15
-    w_walk = 0.1
-    w_div = 0.05
-    w_constraints = 0.1
+    w_local = 0.25
+    w_walk = 0.15
+    w_div = 0.1
 
     while remaining and len(selected) < top_k:
         best: RankedHit | None = None
         best_idx = -1
         for idx, hit in enumerate(remaining):
             pref = _preference_score(hit, trip)
-            bgt = _budget_score(hit, trip)
             loc = _local_tourist_score(hit, trip)
             walk = _walking_feasibility_score(hit, selected, trip)
             div = _diversity_bonus(hit, selected)
-            constraints = _include_exclude_score(hit, trip)
             final = (
                 w_retrieval * hit.hybrid_score
                 + w_pref * pref
-                + w_budget * bgt
                 + w_local * loc
                 + w_walk * walk
                 + w_div * div
-                + w_constraints * constraints
             )
             cand = RankedHit(
                 hit=hit,
                 preference_score=pref,
-                budget_score=bgt,
                 local_tourist_score=loc,
                 walking_feasibility_score=walk,
                 diversity_bonus=div,
-                include_exclude_score=constraints,
                 final_score=final,
             )
             if best is None or cand.final_score > best.final_score:

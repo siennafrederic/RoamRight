@@ -13,6 +13,7 @@ from data.events import Event
 from models.llm_client import chat_completion
 from models.prompts import PROMPT_VARIANTS, build_messages
 from models.user_input import TripRequest
+from pipeline.resolve import ResolvedMustInclude
 from pipeline.schedule import ScheduledItem
 from ranking.scorer import RankedHit
 
@@ -35,7 +36,7 @@ def ranked_hits_to_context(ranked_hits: list[RankedHit]) -> str:
         lines.append(
             (
                 f"{i}. {a.name} [{a.category}] in {a.neighborhood}, {a.city} "
-                f"(price={a.price_level}, final_score={rh.final_score:.3f})\n"
+                f"(final_score={rh.final_score:.3f})\n"
                 f"   tags={', '.join(a.tags)}\n"
                 f"   desc={a.description}"
             )
@@ -48,9 +49,8 @@ def events_to_context(events: list[Event]) -> str:
         return "No date-specific events were found."
     rows: list[str] = []
     for i, e in enumerate(sorted(events, key=lambda x: x.start_datetime), start=1):
-        price = f"{e.price_currency or ''} {e.price_min or '?'}-{e.price_max or '?'}"
         rows.append(
-            f"{i}. {e.name} ({e.start_datetime.isoformat()}) at {e.venue or 'TBA'} | {price} | {e.category or 'event'}"
+            f"{i}. {e.name} ({e.start_datetime.isoformat()}) at {e.venue or 'TBA'} | {e.category or 'event'}"
         )
     return "\n".join(rows)
 
@@ -61,6 +61,20 @@ def schedule_to_context(items: list[ScheduledItem]) -> str:
     rows = [
         f"Day {i.day_index} {i.start_time}-{i.end_time} | {i.item_type} | {i.title} | {i.notes}" for i in items
     ]
+    return "\n".join(rows)
+
+
+def must_include_resolution_context(resolved: list[ResolvedMustInclude]) -> str:
+    if not resolved:
+        return "No explicit must-include constraints were provided."
+    rows: list[str] = []
+    for r in resolved:
+        rows.append(
+            f"- requested='{r.query}' -> title='{r.title}' | source={r.source_type} | status={r.verification_status} | {r.details}"
+        )
+    rows.append(
+        "Instruction: include all requested items; if status=unverified, label clearly as unverified and avoid exact claims."
+    )
     return "\n".join(rows)
 
 
@@ -111,6 +125,7 @@ def generate_itinerary(
     trip: TripRequest,
     ranked_hits: list[RankedHit],
     events: list[Event] | None = None,
+    resolved_must_includes: list[ResolvedMustInclude] | None = None,
     scheduled_items: list[ScheduledItem] | None = None,
     prompt_variant: str = "json_then_explain",
     temperature: float = 0.25,
@@ -124,6 +139,8 @@ def generate_itinerary(
         + events_to_context(events or [])
         + "\n\nDraft timed schedule:\n"
         + schedule_to_context(scheduled_items or [])
+        + "\n\nMust-include resolution:\n"
+        + must_include_resolution_context(resolved_must_includes or [])
     )
     n_days = trip.trip_length_days()
     messages = build_messages(prompt_variant, trip=trip, ranked_context=full_context, required_days=n_days)
@@ -162,6 +179,7 @@ def generate_prompt_variants(
     trip: TripRequest,
     ranked_hits: list[RankedHit],
     events: list[Event] | None = None,
+    resolved_must_includes: list[ResolvedMustInclude] | None = None,
     scheduled_items: list[ScheduledItem] | None = None,
     variants: tuple[str, ...] = PROMPT_VARIANTS,
 ) -> list[GeneratedItinerary]:
@@ -172,6 +190,7 @@ def generate_prompt_variants(
                 trip=trip,
                 ranked_hits=ranked_hits,
                 events=events,
+                resolved_must_includes=resolved_must_includes,
                 scheduled_items=scheduled_items,
                 prompt_variant=variant,
             )

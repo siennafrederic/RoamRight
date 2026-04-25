@@ -42,8 +42,6 @@ def main() -> None:
         destination_country="France",
         start_date=date(2026, 6, 1),
         end_date=date(2026, 6, 5),
-        budget_amount=1800.0,
-        budget_currency="USD",
         preferences=prefs,
         group_type=GroupType.COUPLE,
     )

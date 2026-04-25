@@ -25,12 +25,12 @@ def main() -> None:
     trip = demo_trip_request()
     results = compare_core_approaches(pipeline, trip)
 
-    print(f"Trip: {trip.destination_city}, budget={trip.budget_amount:.0f} {trip.budget_currency}")
-    print("Approach                     relevance   diversity   budget_adherence")
+    print(f"Trip: {trip.destination_city}")
+    print("Approach                     relevance   diversity")
     print("-" * 70)
     for r in results:
         m = r.metrics
-        print(f"{r.approach:28} {m.relevance:9.3f} {m.diversity:10.3f} {m.budget_adherence:17.3f}")
+        print(f"{r.approach:28} {m.relevance:9.3f} {m.diversity:10.3f}")
 
     print("\nPrompt variant comparison (generation from ranked results)")
     print("Variant                    latency_ms   slot_cov   activity_cov   preview")

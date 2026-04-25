@@ -66,6 +66,7 @@ def compare_prompt_variants(pipeline: RoamRightPipeline, trip: TripRequest) -> l
         trip,
         out.ranked_hits,
         events=out.events,
+        resolved_must_includes=out.resolved_must_includes,
         scheduled_items=out.scheduled_items,
     )
     results: list[PromptVariantResult] = []
@@ -91,8 +92,6 @@ def demo_trip_request() -> TripRequest:
         destination_country="France",
         start_date=date(2026, 6, 1),
         end_date=date(2026, 6, 5),
-        budget_amount=1200.0,
-        budget_currency="USD",
         preferences=TravelPreferences(
             interests={"food": 0.9, "nature": 0.7, "local": 0.8, "nightlife": 0.4},
             travel_style=TravelStyle.BALANCED,

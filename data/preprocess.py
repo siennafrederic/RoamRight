@@ -8,7 +8,6 @@ Methodology: curated JSON first; later swap-in APIs/scraping for checkbox13 (10 
 from __future__ import annotations
 
 import json
-import statistics
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -24,10 +23,6 @@ class Activity:
     name: str
     category: str
     description: str
-    price_level: int
-    price_min: float | None
-    price_max: float | None
-    price_currency: str | None
     duration_minutes: int | None
     source_url: str | None
     lat: float | None
@@ -77,19 +72,7 @@ def load_raw_activities(path: Path) -> list[dict[str, Any]]:
 
 
 def preprocess_activities(rows: list[dict[str, Any]]) -> list[Activity]:
-    """Fill missing price levels; normalize tags; drop rows without an id or name."""
-
-    price_levels: list[int] = []
-    for r in rows:
-        pl = r.get("price_level")
-        if pl is None:
-            pl = _nested_get(r, "pricing", "price_level")
-        if pl is not None:
-            try:
-                price_levels.append(int(pl))
-            except (TypeError, ValueError):
-                pass
-    median_price = int(round(statistics.median(price_levels))) if price_levels else 2
+    """Normalize tags; drop rows without an id or name."""
 
     activities: list[Activity] = []
     for r in rows:
@@ -97,15 +80,6 @@ def preprocess_activities(rows: list[dict[str, Any]]) -> list[Activity]:
         name = (r.get("name") or "").strip()
         if not aid or not name:
             continue
-        pl_raw = r.get("price_level")
-        if pl_raw is None:
-            pl_raw = _nested_get(r, "pricing", "price_level")
-        try:
-            price_level = int(pl_raw) if pl_raw is not None else median_price
-        except (TypeError, ValueError):
-            price_level = median_price
-        price_level = max(0, min(4, price_level))
-
         desc = (r.get("description") or "").strip() or "No description provided."
         city = (r.get("city") or "").strip() or "Unknown"
         country = (r.get("country") or "").strip() or "Unknown"
@@ -113,18 +87,6 @@ def preprocess_activities(rows: list[dict[str, Any]]) -> list[Activity]:
         neighborhood = (r.get("neighborhood") or "").strip() or "Unknown"
 
         tags = _normalize_tags(r.get("tags"))
-        price_min = _coerce_float(r.get("price_min"))
-        if price_min is None:
-            price_min = _coerce_float(_nested_get(r, "pricing", "price_min"))
-        price_max = _coerce_float(r.get("price_max"))
-        if price_max is None:
-            price_max = _coerce_float(_nested_get(r, "pricing", "price_max"))
-
-        price_currency_raw = r.get("price_currency")
-        if price_currency_raw is None:
-            price_currency_raw = _nested_get(r, "pricing", "currency")
-        price_currency = str(price_currency_raw).strip().upper() if price_currency_raw else None
-
         duration_raw = r.get("duration_minutes")
         if duration_raw is None:
             duration_raw = _nested_get(r, "duration_minutes", "typical")
@@ -136,8 +98,6 @@ def preprocess_activities(rows: list[dict[str, Any]]) -> list[Activity]:
         source_url_raw = r.get("source_url")
         if source_url_raw is None:
             source_url_raw = _nested_get(r, "source", "primary_url")
-        if source_url_raw is None:
-            source_url_raw = _nested_get(r, "pricing", "booking_url")
         source_url = str(source_url_raw).strip() if source_url_raw else None
 
         lat = _coerce_float(r.get("lat"))
@@ -151,10 +111,6 @@ def preprocess_activities(rows: list[dict[str, Any]]) -> list[Activity]:
                 name=name,
                 category=category,
                 description=desc,
-                price_level=price_level,
-                price_min=price_min,
-                price_max=price_max,
-                price_currency=price_currency,
                 duration_minutes=duration_minutes,
                 source_url=source_url,
                 lat=lat,

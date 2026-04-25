@@ -8,7 +8,7 @@ from evaluation.baselines import (
     retrieval_only_activities,
     retrieval_plus_ranking_activities,
 )
-from evaluation.metrics import MetricBundle, budget_adherence_score, diversity_score, evaluate_activity_set, relevance_score
+from evaluation.metrics import MetricBundle, diversity_score, evaluate_activity_set, relevance_score
 
 __all__ = [
     "ApproachResult",
@@ -22,6 +22,5 @@ __all__ = [
     "retrieval_plus_ranking_activities",
     "relevance_score",
     "diversity_score",
-    "budget_adherence_score",
     "evaluate_activity_set",
 ]
