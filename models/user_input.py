@@ -9,7 +9,7 @@ Rubric alignment:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, datetime
 from enum import Enum
 from typing import FrozenSet
 
@@ -93,15 +93,25 @@ class TripRequest:
     start_date: date
     end_date: date
     budget_amount: float
+    arrival_datetime: datetime | None = None
+    departure_datetime: datetime | None = None
     budget_currency: str = "USD"
     preferences: TravelPreferences = field(default_factory=TravelPreferences)
     group_type: GroupType = GroupType.SOLO
+    must_include: list[str] = field(default_factory=list)
+    must_avoid: list[str] = field(default_factory=list)
+    free_text_notes: str = ""
 
     def __post_init__(self) -> None:
         if self.end_date < self.start_date:
             raise ValueError("end_date must be on or after start_date")
         if self.budget_amount < 0:
             raise ValueError("budget_amount must be non-negative")
+        if self.arrival_datetime and self.departure_datetime and self.departure_datetime < self.arrival_datetime:
+            raise ValueError("departure_datetime must be after arrival_datetime")
+        self.must_include = [x.strip() for x in self.must_include if x.strip()]
+        self.must_avoid = [x.strip() for x in self.must_avoid if x.strip()]
+        self.free_text_notes = self.free_text_notes.strip()
 
     def retrieval_query_text(self) -> str:
         """
@@ -130,5 +140,13 @@ class TripRequest:
             f"Interests: {p.interest_summary()}. "
             f"Style: {style_note}. {local_note}. "
             f"Group: {group}. {walk}. "
-            f"Budget roughly {self.budget_amount:.0f} {self.budget_currency} for the trip."
+            f"Budget roughly {self.budget_amount:.0f} {self.budget_currency} for the trip. "
+            f"Arrive {self.arrival_datetime.isoformat() if self.arrival_datetime else 'unspecified time'}. "
+            f"Depart {self.departure_datetime.isoformat() if self.departure_datetime else 'unspecified time'}. "
+            f"Must include: {', '.join(self.must_include) if self.must_include else 'none'}. "
+            f"Must avoid: {', '.join(self.must_avoid) if self.must_avoid else 'none'}. "
+            f"Additional notes: {self.free_text_notes if self.free_text_notes else 'none'}."
         )
+
+    def trip_length_days(self) -> int:
+        return (self.end_date - self.start_date).days + 1

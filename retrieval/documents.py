@@ -15,9 +15,15 @@ def activity_to_retrieval_doc(activity: Activity) -> str:
     """Single-document-per-activity 'chunk' for dense retrieval."""
     tag_str = " ".join(activity.tags)
     loc = f"{activity.neighborhood}, {activity.city}, {activity.country}"
+    price_str = (
+        f"{activity.price_currency or ''} {activity.price_min or '?'}-{activity.price_max or '?'}"
+        if (activity.price_min is not None or activity.price_max is not None)
+        else f"price level {activity.price_level}"
+    )
+    duration_str = f"{activity.duration_minutes} minutes" if activity.duration_minutes else "duration unknown"
     return (
         f"{activity.name} | {activity.category} | {loc}\n"
-        f"Tags: {tag_str}\n"
+        f"Tags: {tag_str}\nPrice: {price_str}\nDuration: {duration_str}\n"
         f"{activity.description}"
     )
 

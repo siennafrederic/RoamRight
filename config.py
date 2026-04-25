@@ -16,9 +16,35 @@ from openai import OpenAI
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 DATA_DIR = PROJECT_ROOT / "data"
-ACTIVITIES_PATH = DATA_DIR / "activities.json"
-
 load_dotenv(PROJECT_ROOT / ".env")
+
+
+def _resolve_activities_path() -> Path:
+    """
+    Resolve which activity dataset powers retrieval/ranking.
+
+    Priority:
+    1) ROAMRIGHT_ACTIVITIES_PATH env var (absolute or relative)
+    2) Spain pilot dataset in Downloads (if present)
+    3) repo default data/activities.json
+    """
+    env_path = os.getenv("ROAMRIGHT_ACTIVITIES_PATH")
+    if env_path:
+        p = Path(env_path).expanduser()
+        if not p.is_absolute():
+            p = (PROJECT_ROOT / p).resolve()
+        return p
+
+    downloads_spain = Path(
+        "/Users/siennafrederic/Downloads/roamright_spain_madrid_barcelona_activities_v1.json"
+    )
+    if downloads_spain.exists():
+        return downloads_spain
+    return DATA_DIR / "activities.json"
+
+
+ACTIVITIES_PATH = _resolve_activities_path()
+EVENTS_PATH = DATA_DIR / "events.json"
 
 # --- LLM config (provider-agnostic) ---
 # Default is local Ollama to avoid API spend.
@@ -40,6 +66,10 @@ HYBRID_DENSE_WEIGHT = 0.72
 HYBRID_KEYWORD_WEIGHT = 0.28
 
 DEFAULT_TOP_K = 8
+
+# --- Live data providers ---
+USE_LIVE_EVENTS: bool = os.getenv("USE_LIVE_EVENTS", "false").strip().lower() == "true"
+TICKETMASTER_API_KEY: str | None = os.getenv("TICKETMASTER_API_KEY") or None
 
 
 def llm_key_configured() -> bool:

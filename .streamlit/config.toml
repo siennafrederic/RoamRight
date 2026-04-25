@@ -1,0 +1,3 @@
+[server]
+# Avoid heavy module path introspection spam from optional transformer vision deps.
+fileWatcherType = "poll"

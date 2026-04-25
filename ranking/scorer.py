@@ -23,6 +23,7 @@ class RankedHit:
     local_tourist_score: float
     walking_feasibility_score: float
     diversity_bonus: float
+    include_exclude_score: float
     final_score: float
 
 
@@ -71,6 +72,17 @@ def _preference_score(hit: RetrievalHit, trip: TripRequest) -> float:
 
 
 def _budget_score(hit: RetrievalHit, trip: TripRequest) -> float:
+    if hit.activity.price_min is not None:
+        days = (trip.end_date - trip.start_date).days + 1
+        target_daily = trip.budget_amount / max(1, days)
+        price = hit.activity.price_min
+        # If an item costs around one-third of daily budget, score high.
+        # Overly expensive items are penalized strongly.
+        target_item = max(10.0, target_daily / 3.0)
+        ratio = price / target_item
+        if ratio <= 1.0:
+            return _clip01(1.0 - 0.2 * (1.0 - ratio))
+        return _clip01(1.0 - (ratio - 1.0))
     days = (trip.end_date - trip.start_date).days + 1
     target = _price_level_from_budget(trip.budget_amount, days)
     distance = abs(hit.activity.price_level - target)
@@ -113,6 +125,29 @@ def _diversity_bonus(hit: RetrievalHit, selected: list[RankedHit]) -> float:
     return 0.6 * cat_bonus + 0.4 * tag_bonus
 
 
+def _include_exclude_score(hit: RetrievalHit, trip: TripRequest) -> float:
+    """
+    Soft constraint score:
+    - boost matches with must_include phrases
+    - strongly penalize matches with must_avoid phrases
+    """
+    text = " ".join(
+        [
+            hit.activity.name.lower(),
+            hit.activity.category.lower(),
+            hit.activity.description.lower(),
+            " ".join(hit.activity.tags),
+        ]
+    )
+    include_terms = [x.lower() for x in trip.must_include]
+    avoid_terms = [x.lower() for x in trip.must_avoid]
+    include_hits = sum(1 for t in include_terms if t in text) if include_terms else 0
+    avoid_hits = sum(1 for t in avoid_terms if t in text) if avoid_terms else 0
+    include_component = include_hits / max(1, len(include_terms)) if include_terms else 0.5
+    avoid_component = 1.0 - (avoid_hits / max(1, len(avoid_terms))) if avoid_terms else 1.0
+    return _clip01(0.65 * include_component + 0.35 * avoid_component)
+
+
 def rank_hits(hits: list[RetrievalHit], trip: TripRequest, top_k: int = 8) -> list[RankedHit]:
     """
     Greedy re-ranking with diversity-aware selection.
@@ -127,6 +162,7 @@ def rank_hits(hits: list[RetrievalHit], trip: TripRequest, top_k: int = 8) -> li
     w_local = 0.15
     w_walk = 0.1
     w_div = 0.05
+    w_constraints = 0.1
 
     while remaining and len(selected) < top_k:
         best: RankedHit | None = None
@@ -137,6 +173,7 @@ def rank_hits(hits: list[RetrievalHit], trip: TripRequest, top_k: int = 8) -> li
             loc = _local_tourist_score(hit, trip)
             walk = _walking_feasibility_score(hit, selected, trip)
             div = _diversity_bonus(hit, selected)
+            constraints = _include_exclude_score(hit, trip)
             final = (
                 w_retrieval * hit.hybrid_score
                 + w_pref * pref
@@ -144,6 +181,7 @@ def rank_hits(hits: list[RetrievalHit], trip: TripRequest, top_k: int = 8) -> li
                 + w_local * loc
                 + w_walk * walk
                 + w_div * div
+                + w_constraints * constraints
             )
             cand = RankedHit(
                 hit=hit,
@@ -152,6 +190,7 @@ def rank_hits(hits: list[RetrievalHit], trip: TripRequest, top_k: int = 8) -> li
                 local_tourist_score=loc,
                 walking_feasibility_score=walk,
                 diversity_bonus=div,
+                include_exclude_score=constraints,
                 final_score=final,
             )
             if best is None or cand.final_score > best.final_score:

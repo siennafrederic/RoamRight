@@ -25,6 +25,11 @@ class Activity:
     category: str
     description: str
     price_level: int
+    price_min: float | None
+    price_max: float | None
+    price_currency: str | None
+    duration_minutes: int | None
+    source_url: str | None
     lat: float | None
     lon: float | None
     neighborhood: str
@@ -53,6 +58,15 @@ def _coerce_float(v: Any) -> float | None:
         return None
 
 
+def _nested_get(d: dict[str, Any], *keys: str) -> Any:
+    cur: Any = d
+    for k in keys:
+        if not isinstance(cur, dict):
+            return None
+        cur = cur.get(k)
+    return cur
+
+
 def load_raw_activities(path: Path) -> list[dict[str, Any]]:
     with path.open(encoding="utf-8") as f:
         payload = json.load(f)
@@ -68,6 +82,8 @@ def preprocess_activities(rows: list[dict[str, Any]]) -> list[Activity]:
     price_levels: list[int] = []
     for r in rows:
         pl = r.get("price_level")
+        if pl is None:
+            pl = _nested_get(r, "pricing", "price_level")
         if pl is not None:
             try:
                 price_levels.append(int(pl))
@@ -82,6 +98,8 @@ def preprocess_activities(rows: list[dict[str, Any]]) -> list[Activity]:
         if not aid or not name:
             continue
         pl_raw = r.get("price_level")
+        if pl_raw is None:
+            pl_raw = _nested_get(r, "pricing", "price_level")
         try:
             price_level = int(pl_raw) if pl_raw is not None else median_price
         except (TypeError, ValueError):
@@ -95,6 +113,33 @@ def preprocess_activities(rows: list[dict[str, Any]]) -> list[Activity]:
         neighborhood = (r.get("neighborhood") or "").strip() or "Unknown"
 
         tags = _normalize_tags(r.get("tags"))
+        price_min = _coerce_float(r.get("price_min"))
+        if price_min is None:
+            price_min = _coerce_float(_nested_get(r, "pricing", "price_min"))
+        price_max = _coerce_float(r.get("price_max"))
+        if price_max is None:
+            price_max = _coerce_float(_nested_get(r, "pricing", "price_max"))
+
+        price_currency_raw = r.get("price_currency")
+        if price_currency_raw is None:
+            price_currency_raw = _nested_get(r, "pricing", "currency")
+        price_currency = str(price_currency_raw).strip().upper() if price_currency_raw else None
+
+        duration_raw = r.get("duration_minutes")
+        if duration_raw is None:
+            duration_raw = _nested_get(r, "duration_minutes", "typical")
+        try:
+            duration_minutes = int(duration_raw) if duration_raw is not None else None
+        except (TypeError, ValueError):
+            duration_minutes = None
+
+        source_url_raw = r.get("source_url")
+        if source_url_raw is None:
+            source_url_raw = _nested_get(r, "source", "primary_url")
+        if source_url_raw is None:
+            source_url_raw = _nested_get(r, "pricing", "booking_url")
+        source_url = str(source_url_raw).strip() if source_url_raw else None
+
         lat = _coerce_float(r.get("lat"))
         lon = _coerce_float(r.get("lon"))
 
@@ -107,6 +152,11 @@ def preprocess_activities(rows: list[dict[str, Any]]) -> list[Activity]:
                 category=category,
                 description=desc,
                 price_level=price_level,
+                price_min=price_min,
+                price_max=price_max,
+                price_currency=price_currency,
+                duration_minutes=duration_minutes,
+                source_url=source_url,
                 lat=lat,
                 lon=lon,
                 neighborhood=neighborhood,

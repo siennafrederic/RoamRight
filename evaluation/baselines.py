@@ -62,7 +62,12 @@ def compare_core_approaches(pipeline: RoamRightPipeline, trip: TripRequest) -> l
 
 def compare_prompt_variants(pipeline: RoamRightPipeline, trip: TripRequest) -> list[PromptVariantResult]:
     out = pipeline.run(trip, top_k_retrieval=16, top_k_ranked=8)
-    generated: list[GeneratedItinerary] = generate_prompt_variants(trip, out.ranked_hits)
+    generated: list[GeneratedItinerary] = generate_prompt_variants(
+        trip,
+        out.ranked_hits,
+        events=out.events,
+        scheduled_items=out.scheduled_items,
+    )
     results: list[PromptVariantResult] = []
     for g in generated:
         preview = g.itinerary_text.replace("\n", " ").strip()
