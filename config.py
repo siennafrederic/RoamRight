@@ -25,8 +25,7 @@ def _resolve_activities_path() -> Path:
 
     Priority:
     1) ROAMRIGHT_ACTIVITIES_PATH env var (absolute or relative)
-    2) Spain pilot dataset in Downloads (if present)
-    3) repo default data/activities.json
+    2) repo default data/SpainAttractions.json
     """
     env_path = os.getenv("ROAMRIGHT_ACTIVITIES_PATH")
     if env_path:
@@ -35,12 +34,7 @@ def _resolve_activities_path() -> Path:
             p = (PROJECT_ROOT / p).resolve()
         return p
 
-    downloads_spain = Path(
-        "/Users/siennafrederic/Downloads/roamright_spain_madrid_barcelona_activities_v1.json"
-    )
-    if downloads_spain.exists():
-        return downloads_spain
-    return DATA_DIR / "activities.json"
+    return DATA_DIR / "SpainAttractions.json"
 
 
 ACTIVITIES_PATH = _resolve_activities_path()
