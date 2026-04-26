@@ -8,11 +8,13 @@ from evaluation.baselines import (
     retrieval_only_activities,
     retrieval_plus_ranking_activities,
 )
+from evaluation.benchmark_requests import benchmark_requests
 from evaluation.metrics import MetricBundle, diversity_score, evaluate_activity_set, relevance_score
 
 __all__ = [
     "ApproachResult",
     "PromptVariantResult",
+    "benchmark_requests",
     "MetricBundle",
     "compare_core_approaches",
     "compare_prompt_variants",

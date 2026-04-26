@@ -334,7 +334,6 @@ def _normalize_days(
                     if key in day_used or any(x.strip().lower() == key for x in chosen):
                         continue
                     chosen.append(candidate)
-
             slot_rows[slot] = chosen[: max(1, target)]
             for item in slot_rows[slot]:
                 key = item.strip().lower()

@@ -25,7 +25,7 @@ def _resolve_activities_path() -> Path:
 
     Priority:
     1) ROAMRIGHT_ACTIVITIES_PATH env var (absolute or relative)
-    2) repo default data/SpainAttractions.json
+    2) repo default data/EuropeAttractions.json
     """
     env_path = os.getenv("ROAMRIGHT_ACTIVITIES_PATH")
     if env_path:
@@ -34,7 +34,7 @@ def _resolve_activities_path() -> Path:
             p = (PROJECT_ROOT / p).resolve()
         return p
 
-    return DATA_DIR / "SpainAttractions.json"
+    return DATA_DIR / "EuropeAttractions.json"
 
 
 ACTIVITIES_PATH = _resolve_activities_path()
@@ -60,10 +60,6 @@ HYBRID_DENSE_WEIGHT = 0.72
 HYBRID_KEYWORD_WEIGHT = 0.28
 
 DEFAULT_TOP_K = 8
-
-# --- Live data providers ---
-USE_LIVE_EVENTS: bool = os.getenv("USE_LIVE_EVENTS", "false").strip().lower() == "true"
-TICKETMASTER_API_KEY: str | None = os.getenv("TICKETMASTER_API_KEY") or None
 
 
 def llm_key_configured() -> bool:

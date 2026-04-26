@@ -1,0 +1,86 @@
+{
+  "generated_at": "2026-04-26T04:34:14.851453Z",
+  "num_requests": 1,
+  "skip_generation": true,
+  "summary": {
+    "full_pipeline": {
+      "relevance": 0.3715,
+      "diversity": 0.6225,
+      "latency_ms": null,
+      "slot_coverage": null,
+      "activity_coverage": null
+    },
+    "no_events": {
+      "relevance": 0.3715,
+      "diversity": 0.6225,
+      "latency_ms": null,
+      "slot_coverage": null,
+      "activity_coverage": null
+    },
+    "no_personality": {
+      "relevance": 0.1979,
+      "diversity": 0.75,
+      "latency_ms": null,
+      "slot_coverage": null,
+      "activity_coverage": null
+    },
+    "no_ranking": {
+      "relevance": 0.3021,
+      "diversity": 0.5407,
+      "latency_ms": null,
+      "slot_coverage": null,
+      "activity_coverage": null
+    },
+    "no_rag": {
+      "relevance": 0.2326,
+      "diversity": 0.55,
+      "latency_ms": null,
+      "slot_coverage": null,
+      "activity_coverage": null
+    }
+  },
+  "per_trip": {
+    "Barcelona_2026-06-10_2026-06-14": [
+      {
+        "approach": "full_pipeline",
+        "relevance": 0.3715,
+        "diversity": 0.6225,
+        "latency_ms": null,
+        "slot_coverage": null,
+        "activity_coverage": null
+      },
+      {
+        "approach": "no_events",
+        "relevance": 0.3715,
+        "diversity": 0.6225,
+        "latency_ms": null,
+        "slot_coverage": null,
+        "activity_coverage": null
+      },
+      {
+        "approach": "no_personality",
+        "relevance": 0.1979,
+        "diversity": 0.75,
+        "latency_ms": null,
+        "slot_coverage": null,
+        "activity_coverage": null
+      },
+      {
+        "approach": "no_ranking",
+        "relevance": 0.3021,
+        "diversity": 0.5407,
+        "latency_ms": null,
+        "slot_coverage": null,
+        "activity_coverage": null
+      },
+      {
+        "approach": "no_rag",
+        "relevance": 0.2326,
+        "diversity": 0.55,
+        "latency_ms": null,
+        "slot_coverage": null,
+        "activity_coverage": null
+      }
+    ]
+  }
+}
