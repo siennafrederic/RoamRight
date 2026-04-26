@@ -234,6 +234,14 @@ legend {
   font-size: 0.9rem;
 }
 
+.day-card ul ul {
+  margin-top: 0.25rem;
+  padding-left: 1rem;
+  list-style: disc;
+  display: grid;
+  gap: 0.2rem;
+}
+
 .explanation-box {
   border: 1px solid rgba(177, 190, 255, 0.2);
   border-radius: 12px;

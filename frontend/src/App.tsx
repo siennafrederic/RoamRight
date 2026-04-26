@@ -1,5 +1,5 @@
 import { FormEvent, useMemo, useState } from "react";
-import { generatePlan } from "./api";
+import { generatePlan, refinePlan } from "./api";
 import type { PlanRequest, PlanResponse } from "./types";
 
 const ALL_INTERESTS = [
@@ -34,6 +34,7 @@ export default function App() {
   const [result, setResult] = useState<PlanResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refineFeedback, setRefineFeedback] = useState("");
 
   const tripLength = useMemo(() => {
     const start = new Date(request.startDate);
@@ -61,6 +62,25 @@ export default function App() {
       setResult(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRefine = async () => {
+    if (!result || !refineFeedback.trim()) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await refinePlan({
+        baseRequest: request,
+        currentItineraryText: result.itineraryText,
+        feedback: refineFeedback.trim()
+      });
+      setResult(data);
+      setRefineFeedback("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Refinement failed.");
     } finally {
       setLoading(false);
     }
@@ -240,13 +260,31 @@ export default function App() {
                     <h3>Day {d.day}</h3>
                     <ul>
                       <li>
-                        <strong>Morning:</strong> {d.morning}
+                        <strong>Morning:</strong>
+                        <ul>
+                          {d.morning.length === 0 ? <li>No morning plan (travel window).</li> : null}
+                          {d.morning.map((item, idx) => (
+                            <li key={`m-${d.day}-${idx}`}>{item}</li>
+                          ))}
+                        </ul>
                       </li>
                       <li>
-                        <strong>Afternoon:</strong> {d.afternoon}
+                        <strong>Afternoon:</strong>
+                        <ul>
+                          {d.afternoon.length === 0 ? <li>No afternoon plan (travel window).</li> : null}
+                          {d.afternoon.map((item, idx) => (
+                            <li key={`a-${d.day}-${idx}`}>{item}</li>
+                          ))}
+                        </ul>
                       </li>
                       <li>
-                        <strong>Evening:</strong> {d.evening}
+                        <strong>Evening:</strong>
+                        <ul>
+                          {d.evening.length === 0 ? <li>No evening plan (travel window).</li> : null}
+                          {d.evening.map((item, idx) => (
+                            <li key={`e-${d.day}-${idx}`}>{item}</li>
+                          ))}
+                        </ul>
                       </li>
                     </ul>
                   </article>
@@ -274,6 +312,24 @@ export default function App() {
                   </li>
                 ))}
               </ul>
+
+              <div className="explanation-box">
+                <h3>Refine This Plan</h3>
+                <textarea
+                  rows={3}
+                  value={refineFeedback}
+                  onChange={(e) => setRefineFeedback(e.target.value)}
+                  placeholder="Example: make day 2 more local and reduce walking; add one late-night music stop."
+                />
+                <button
+                  className="primary-btn"
+                  type="button"
+                  onClick={onRefine}
+                  disabled={loading || !refineFeedback.trim()}
+                >
+                  {loading ? "Refining..." : "Refine Itinerary"}
+                </button>
+              </div>
             </>
           )}
         </section>

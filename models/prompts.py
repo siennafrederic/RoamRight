@@ -88,16 +88,22 @@ def build_messages(
             f"{correction}"
         )
     else:  # json_then_explain
+        slot_count_guide = {
+            "relaxed": "1 item per valid slot",
+            "balanced": "2 items per valid slot when feasible",
+            "packed": "2-3 items per valid slot when feasible",
+        }[trip.preferences.travel_style.value]
         system = (
             "You output a compact machine-readable plan first, then a short explanation section."
         )
         user = (
             "First output JSON with schema:\n"
-            "{days: [{day: int, morning: str, afternoon: str, evening: str}], notes: [str]}\n"
+            "{days: [{day: int, morning: [str], afternoon: [str], evening: [str]}], notes: [str]}\n"
             f"The JSON must include exactly {n_days} entries in `days` with day values 1..{n_days}.\n"
             "Use arrival/departure times to decide valid slots. If arrival is late on day 1, leave earlier slots empty. "
             "If departure is early on the last day, leave later slots empty.\n"
-            "For all other valid slots, provide non-empty strings.\n"
+            f"Activity density target for this trip: {slot_count_guide}.\n"
+            "For all other valid slots, provide non-empty arrays.\n"
             "Time-of-day alignment is mandatory: morning items must be morning-friendly; "
             "evening items must be dinner/nightlife/event-friendly.\n"
             "Do not place dinner-only items in morning slots.\n"

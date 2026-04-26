@@ -15,9 +15,9 @@ export type PlanRequest = {
 
 export type DayPlan = {
   day: number;
-  morning: string;
-  afternoon: string;
-  evening: string;
+  morning: string[];
+  afternoon: string[];
+  evening: string[];
 };
 
 export type PlanResponse = {
@@ -29,4 +29,10 @@ export type PlanResponse = {
     category: string;
     neighborhood?: string;
   }>;
+};
+
+export type RefineRequest = {
+  baseRequest: PlanRequest;
+  currentItineraryText: string;
+  feedback: string;
 };
