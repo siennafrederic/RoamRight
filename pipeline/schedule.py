@@ -1,5 +1,5 @@
 """
-Time-aware scheduling from ranked activities + optional events.
+Time-aware scheduling from ranked activities.
 """
 
 from __future__ import annotations
@@ -8,7 +8,6 @@ import math
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 
-from data.events import Event
 from models.user_input import TripRequest, TravelStyle
 from ranking.scorer import RankedHit
 
@@ -68,17 +67,14 @@ def _day_end(trip: TripRequest, day_date: date) -> datetime:
     return datetime.combine(day_date, datetime.strptime("21:30", "%H:%M").time())
 
 
-def build_timed_schedule(trip: TripRequest, ranked_hits: list[RankedHit], events: list[Event]) -> list[ScheduledItem]:
+def build_timed_schedule(trip: TripRequest, ranked_hits: list[RankedHit]) -> list[ScheduledItem]:
     """
     Build a pragmatic timestamped plan with buffers and transit estimates.
     """
     items: list[ScheduledItem] = []
     days = trip.trip_length_days()
-    if not ranked_hits and not events:
+    if not ranked_hits:
         return items
-    event_by_day: dict[date, list[Event]] = {}
-    for e in events:
-        event_by_day.setdefault(e.start_datetime.date(), []).append(e)
     idx = 0
     for day_idx in range(1, days + 1):
         d = trip.start_date + timedelta(days=day_idx - 1)
@@ -113,17 +109,4 @@ def build_timed_schedule(trip: TripRequest, ranked_hits: list[RankedHit], events
             )
             t = end + timedelta(minutes=_buffer_minutes(trip.preferences.travel_style))
             prev_rh = rh
-
-        for e in event_by_day.get(d, []):
-            e_end = e.end_datetime or (e.start_datetime + timedelta(minutes=120))
-            items.append(
-                ScheduledItem(
-                    day_index=day_idx,
-                    start_time=e.start_datetime.strftime("%H:%M"),
-                    end_time=e_end.strftime("%H:%M"),
-                    title=e.name,
-                    item_type="event",
-                    notes=f"{e.venue or 'venue TBA'}",
-                )
-            )
     return items

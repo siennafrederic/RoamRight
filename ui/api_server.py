@@ -2,12 +2,13 @@
 FastAPI bridge for the React frontend.
 
 This maps frontend payloads directly into the existing RoamRight pipeline:
-TripRequest -> retrieval/ranking/events/schedule -> LLM itinerary generation.
+TripRequest -> retrieval/ranking/schedule -> LLM itinerary generation.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import re
 from datetime import date, datetime, time
 from functools import lru_cache
@@ -353,9 +354,15 @@ def _normalize_days(
 
 app = FastAPI(title="RoamRight API", version="1.0.0")
 
+_cors_origins_raw = os.getenv("CORS_ALLOW_ORIGINS", "").strip()
+if _cors_origins_raw:
+    allow_origins = [x.strip() for x in _cors_origins_raw.split(",") if x.strip()]
+else:
+    allow_origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -379,7 +386,6 @@ def plan(req: PlanRequest) -> PlanResponse:
         gen = generate_itinerary(
             trip=trip,
             ranked_hits=out.ranked_hits,
-            events=out.events,
             resolved_must_includes=out.resolved_must_includes,
             scheduled_items=out.scheduled_items,
             prompt_variant="json_then_explain",

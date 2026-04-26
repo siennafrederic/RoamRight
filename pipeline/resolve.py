@@ -1,9 +1,8 @@
 """
-Resolve must-include requests against dataset activities and events.
+Resolve must-include requests against dataset activities.
 
 No extra APIs required in this first version:
 - exact/fuzzy match against curated activity catalog
-- exact/fuzzy match against available events
 - fallback placeholder when unresolved
 """
 
@@ -12,7 +11,6 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from data.events import Event
 from data.preprocess import Activity
 from models.user_input import TripRequest
 
@@ -38,7 +36,7 @@ def _overlap_score(query: str, candidate: str) -> float:
 class ResolvedMustInclude:
     query: str
     title: str
-    source_type: str  # activity_dataset | events_api_or_cache | general_knowledge_placeholder
+    source_type: str  # activity_dataset | general_knowledge_placeholder
     verification_status: str  # verified | unverified
     details: str
 
@@ -63,23 +61,9 @@ def _activity_match(query: str, activities: list[Activity]) -> Activity | None:
     return best[1] if best else None
 
 
-def _event_match(query: str, events: list[Event]) -> Event | None:
-    qn = _norm(query)
-    best: tuple[float, Event] | None = None
-    for e in events:
-        cand = f"{e.name} {e.description} {e.venue or ''} {e.category or ''}"
-        score = _overlap_score(qn, cand)
-        if qn in _norm(e.name):
-            score = max(score, 0.99)
-        if score >= 0.55 and (best is None or score > best[0]):
-            best = (score, e)
-    return best[1] if best else None
-
-
 def resolve_must_includes(
     trip: TripRequest,
     activities: list[Activity],
-    events: list[Event],
 ) -> list[ResolvedMustInclude]:
     resolved: list[ResolvedMustInclude] = []
     for raw in trip.must_include:
@@ -98,25 +82,13 @@ def resolve_must_includes(
                 )
             )
             continue
-        e = _event_match(query, events)
-        if e:
-            resolved.append(
-                ResolvedMustInclude(
-                    query=query,
-                    title=e.name,
-                    source_type="events_api_or_cache",
-                    verification_status="verified",
-                    details=f"{e.start_datetime.isoformat()} | {e.venue or 'venue TBA'} | {e.source_url or 'source unknown'}",
-                )
-            )
-            continue
         resolved.append(
             ResolvedMustInclude(
                 query=query,
                 title=query,
                 source_type="general_knowledge_placeholder",
                 verification_status="unverified",
-                details="Not found in dataset/events. Keep as placeholder and verify manually.",
+                details="Not found in activity dataset. Keep as placeholder and verify manually.",
             )
         )
     return resolved

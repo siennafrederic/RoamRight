@@ -9,7 +9,6 @@ import re
 from dataclasses import dataclass
 from time import perf_counter
 
-from data.events import Event
 from models.llm_client import chat_completion
 from models.prompts import PROMPT_VARIANTS, build_messages
 from models.user_input import TripRequest
@@ -42,17 +41,6 @@ def ranked_hits_to_context(ranked_hits: list[RankedHit]) -> str:
             )
         )
     return "\n".join(lines)
-
-
-def events_to_context(events: list[Event]) -> str:
-    if not events:
-        return "No date-specific events were found."
-    rows: list[str] = []
-    for i, e in enumerate(sorted(events, key=lambda x: x.start_datetime), start=1):
-        rows.append(
-            f"{i}. {e.name} ({e.start_datetime.isoformat()}) at {e.venue or 'TBA'} | {e.category or 'event'}"
-        )
-    return "\n".join(rows)
 
 
 def schedule_to_context(items: list[ScheduledItem]) -> str:
@@ -166,7 +154,6 @@ def _has_invalid_slots(text: str, trip: TripRequest) -> bool:
 def generate_itinerary(
     trip: TripRequest,
     ranked_hits: list[RankedHit],
-    events: list[Event] | None = None,
     resolved_must_includes: list[ResolvedMustInclude] | None = None,
     scheduled_items: list[ScheduledItem] | None = None,
     prompt_variant: str = "json_then_explain",
@@ -177,8 +164,6 @@ def generate_itinerary(
     full_context = (
         "Ranked activities:\n"
         + activities_context
-        + "\n\nDate-specific events:\n"
-        + events_to_context(events or [])
         + "\n\nDraft timed schedule:\n"
         + schedule_to_context(scheduled_items or [])
         + "\n\nMust-include resolution:\n"
@@ -220,7 +205,6 @@ def generate_itinerary(
 def generate_prompt_variants(
     trip: TripRequest,
     ranked_hits: list[RankedHit],
-    events: list[Event] | None = None,
     resolved_must_includes: list[ResolvedMustInclude] | None = None,
     scheduled_items: list[ScheduledItem] | None = None,
     variants: tuple[str, ...] = PROMPT_VARIANTS,
@@ -231,7 +215,6 @@ def generate_prompt_variants(
             generate_itinerary(
                 trip=trip,
                 ranked_hits=ranked_hits,
-                events=events,
                 resolved_must_includes=resolved_must_includes,
                 scheduled_items=scheduled_items,
                 prompt_variant=variant,

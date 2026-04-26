@@ -1,8 +1,5 @@
 """
 Hybrid retriever: dense (FAISS) + keyword overlap.
-
-Rubric: **Developed custom RAG** — includes **hybrid search** (keyword + embedding).
-Additional RAG legs (embedding comparison, reranking) can plug in here later.
 """
 
 from __future__ import annotations

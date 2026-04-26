@@ -1,6 +1,4 @@
 """Sentence embeddings via sentence-transformers (bi-encoder).
-
-Rubric: sentence embeddings for semantic similarity / retrieval (5 pts).
 """
 
 from __future__ import annotations

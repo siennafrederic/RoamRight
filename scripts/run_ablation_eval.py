@@ -103,15 +103,12 @@ def evaluate_trip(pipeline: RoamRightPipeline, trip: TripRequest, skip_generatio
     out_no_personality = pipeline.run(trip_no_personality, top_k_retrieval=24, top_k_ranked=12)
     no_personality_acts = [rh.hit.activity for rh in out_no_personality.ranked_hits]
 
-    no_events_acts = full_acts
-
-    def gen_for(trip_for_gen: TripRequest, ranked_hits, events, resolved, schedule) -> GenMetrics | None:
+    def gen_for(trip_for_gen: TripRequest, ranked_hits, resolved, schedule) -> GenMetrics | None:
         if skip_generation:
             return None
         g = generate_itinerary(
             trip=trip_for_gen,
             ranked_hits=ranked_hits,
-            events=events,
             resolved_must_includes=resolved,
             scheduled_items=schedule,
             prompt_variant="json_then_explain",
@@ -125,15 +122,6 @@ def evaluate_trip(pipeline: RoamRightPipeline, trip: TripRequest, skip_generatio
     full_gen = gen_for(
         trip,
         out_full.ranked_hits,
-        out_full.events,
-        out_full.resolved_must_includes,
-        out_full.scheduled_items,
-    )
-
-    no_events_gen = gen_for(
-        trip,
-        out_full.ranked_hits,
-        [],
         out_full.resolved_must_includes,
         out_full.scheduled_items,
     )
@@ -141,14 +129,12 @@ def evaluate_trip(pipeline: RoamRightPipeline, trip: TripRequest, skip_generatio
     no_personality_gen = gen_for(
         trip_no_personality,
         out_no_personality.ranked_hits,
-        out_no_personality.events,
         out_no_personality.resolved_must_includes,
         out_no_personality.scheduled_items,
     )
 
     return [
         ApproachEval("full_pipeline", evaluate_activity_set(full_acts, trip), full_gen),
-        ApproachEval("no_events", evaluate_activity_set(no_events_acts, trip), no_events_gen),
         ApproachEval("no_personality", evaluate_activity_set(no_personality_acts, trip), no_personality_gen),
         ApproachEval("no_ranking", evaluate_activity_set(no_ranking_acts, trip), None),
         ApproachEval("no_rag", evaluate_activity_set(no_rag_acts, trip), None),
@@ -188,7 +174,7 @@ def write_markdown(
     path: Path, summary: dict[str, dict[str, float | None]], num_requests: int, skip_generation: bool
 ) -> None:
     headers = ["Approach", "Relevance", "Diversity", "Latency (ms)", "Slot Coverage", "Activity Coverage"]
-    order = ["full_pipeline", "no_events", "no_personality", "no_ranking", "no_rag"]
+    order = ["full_pipeline", "no_personality", "no_ranking", "no_rag"]
     lines = [
         "# Ablation Evaluation Summary",
         "",

@@ -1,8 +1,5 @@
 """
 Load and clean activity records for indexing.
-
-Rubric: basic preprocessing (missing values, normalization) — checkbox9 (3 pts).
-Methodology: curated JSON first; later swap-in APIs/scraping for checkbox13 (10 pts).
 """
 
 from __future__ import annotations

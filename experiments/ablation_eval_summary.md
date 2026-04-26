@@ -1,12 +1,11 @@
 # Ablation Evaluation Summary
 
-- Requests evaluated: **1**
-- Generation metrics included: **No**
+- Requests evaluated: **12**
+- Generation metrics included: **Yes**
 
 | Approach | Relevance | Diversity | Latency (ms) | Slot Coverage | Activity Coverage |
 |---|---:|---:|---:|---:|---:|
-| full_pipeline | 0.3715 | 0.6225 | - | - | - |
-| no_events | 0.3715 | 0.6225 | - | - | - |
-| no_personality | 0.1979 | 0.75 | - | - | - |
-| no_ranking | 0.3021 | 0.5407 | - | - | - |
-| no_rag | 0.2326 | 0.55 | - | - | - |
+| full_pipeline | 0.4808 | 0.4653 | 48278.32 | 1.0 | 0.8646 |
+| no_personality | 0.3507 | 0.5467 | 45201.83 | 1.0 | 0.8646 |
+| no_ranking | 0.3882 | 0.4621 | - | - | - |
+| no_rag | 0.3439 | 0.4193 | - | - | - |

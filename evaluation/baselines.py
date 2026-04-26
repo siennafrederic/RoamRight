@@ -65,7 +65,6 @@ def compare_prompt_variants(pipeline: RoamRightPipeline, trip: TripRequest) -> l
     generated: list[GeneratedItinerary] = generate_prompt_variants(
         trip,
         out.ranked_hits,
-        events=out.events,
         resolved_must_includes=out.resolved_must_includes,
         scheduled_items=out.scheduled_items,
     )

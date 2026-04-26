@@ -1,9 +1,5 @@
 """
 Build retrieval documents from structured activity rows.
-
-Rubric (custom RAG, 10 pts): **custom chunking strategy** — we serialize each activity
-into a fixed template so embeddings capture category, place, tags, and narrative text
-consistently (better than raw description-only chunks for tabular POI data).
 """
 
 from __future__ import annotations

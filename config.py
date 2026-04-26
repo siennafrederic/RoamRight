@@ -38,7 +38,6 @@ def _resolve_activities_path() -> Path:
 
 
 ACTIVITIES_PATH = _resolve_activities_path()
-EVENTS_PATH = DATA_DIR / "events.json"
 
 # --- LLM config (provider-agnostic) ---
 # Default is local Ollama to avoid API spend.
