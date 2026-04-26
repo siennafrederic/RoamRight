@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { generatePlan, refinePlan } from "./api";
 import type { PlanRequest, PlanResponse } from "./types";
 
@@ -12,6 +12,22 @@ const ALL_INTERESTS = [
   "architecture",
   "wellness",
   "music"
+];
+
+const BACKGROUND_IMAGES = [
+  "/images/eduardo-rodriguez-7GWTKyvUjag-unsplash.jpg",
+  "/images/florian-wehde-WBGjg0DsO_g-unsplash.jpg",
+  "/images/harrison-fitts-VXHqJN52K6s-unsplash.jpg",
+  "/images/henrique-ferreira-62QRdDoe44M-unsplash.jpg",
+  "/images/jorge-fernandez-salas-C7MUgJowo8s-unsplash.jpg",
+  "/images/jorge-fernandez-salas-ChSZETOal-I-unsplash.jpg",
+  "/images/jorge-fernandez-salas-v8XeGZf8tcs-unsplash.jpg",
+  "/images/sam-williams-UuGAw6nF0Vw-unsplash.jpg",
+  "/images/susan-flynn-cHOkA_U_CPM-unsplash.jpg",
+  "/images/taisia-karaseva-s3kdLmeYxXs-unsplash.jpg",
+  "/images/tomas-nozina-UP22zkjJGZo-unsplash.jpg",
+  "/images/victoriano-izquierdo-HoevDVvxInw-unsplash.jpg",
+  "/images/vienna-reyes-5X1y4fvpIV0-unsplash.jpg"
 ];
 
 const initialRequest: PlanRequest = {
@@ -35,6 +51,15 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refineFeedback, setRefineFeedback] = useState("");
+  const [bgIndex, setBgIndex] = useState(0);
+  const [showResultView, setShowResultView] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setBgIndex((prev) => (prev + 1) % BACKGROUND_IMAGES.length);
+    }, 9000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const tripLength = useMemo(() => {
     const start = new Date(request.startDate);
@@ -60,6 +85,7 @@ export default function App() {
     try {
       const data = await generatePlan(request);
       setResult(data);
+      setShowResultView(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
@@ -79,6 +105,7 @@ export default function App() {
       });
       setResult(data);
       setRefineFeedback("");
+      setShowResultView(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Refinement failed.");
     } finally {
@@ -88,18 +115,27 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <div className="glow glow-one" />
-      <div className="glow glow-two" />
+      <div
+        className="slideshow-bg"
+        style={{ backgroundImage: `url("${BACKGROUND_IMAGES[bgIndex]}")` }}
+      />
+      <div className="slideshow-overlay" />
       <header className="hero">
-        <p className="eyebrow">RoamRight</p>
-        <h1>Plan your next vibe-heavy adventure</h1>
-        <p className="subtitle">
-          Personality-aware itineraries for people who want both iconic spots and local energy.
-        </p>
+        <div className="hero-content">
+          <p className="brand-title">RoamRight</p>
+          <h1>
+            plan trips that <span className="accent-actually">actually</span> match your vibe
+          </h1>
+          <p className="subtitle">
+            From hidden alleys to iconic skylines — your trip, your tempo
+          </p>
+        </div>
+        <p className="scroll-hint">Scroll down to start planning</p>
       </header>
 
-      <main className="layout">
-        <form className="card form-card" onSubmit={onSubmit}>
+      <main className="layout single-panel">
+        {!showResultView && !loading && (
+          <form className="card form-card" onSubmit={onSubmit}>
           <h2>Trip Details</h2>
           <div className="grid two-col">
             <label>
@@ -241,18 +277,36 @@ export default function App() {
           </label>
 
           <button className="primary-btn" disabled={loading || tripLength <= 0}>
-            {loading ? "Generating..." : "Generate Itinerary"}
+            {loading ? "Generating..." : "Generate Your Perfect Trip"}
           </button>
 
           {tripLength <= 0 && <p className="hint">End date must be on or after start date.</p>}
           {error && <p className="error">{error}</p>}
-        </form>
+          </form>
+        )}
 
-        <section className="card result-card">
-          <h2>Your Itinerary</h2>
+        {loading && (
+          <section className="card loading-card">
+            <div className="spinner" />
+            <h2>Building your itinerary...</h2>
+            <p>Matching your vibe with activities, timing, and flow.</p>
+          </section>
+        )}
+
+        {!loading && showResultView && result && (
+          <section className="card result-card">
+          <h2>Your Perfect Trip</h2>
           <p className="pill">{tripLength} day trip</p>
-          {!result && <p className="empty">Generate a plan to see your itinerary here.</p>}
-          {result && (
+            <button
+              type="button"
+              className="secondary-btn"
+              onClick={() => {
+                setShowResultView(false);
+                setError(null);
+              }}
+            >
+              Edit Trip Details
+            </button>
             <>
               <div className="day-grid">
                 {result.days.map((d) => (
@@ -331,8 +385,8 @@ export default function App() {
                 </button>
               </div>
             </>
-          )}
-        </section>
+          </section>
+        )}
       </main>
     </div>
   );
