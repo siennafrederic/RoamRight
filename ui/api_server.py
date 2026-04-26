@@ -149,13 +149,45 @@ def _to_items(value: object) -> list[str]:
     return []
 
 
-def _target_items_per_slot(trip: TripRequest) -> int:
+def _slot_item_targets(trip: TripRequest, req: dict[str, bool]) -> dict[str, int]:
+    """
+    Per-slot density rules:
+    - relaxed: 0-1 per slot, only one slot can be empty
+    - balanced: 1-2 per slot, only one slot has 2
+    - packed: 1-2 per slot, only one slot has 1 (most 2)
+    """
+    slots = [s for s in ("morning", "afternoon", "evening") if req[s]]
+    targets = {s: 0 for s in ("morning", "afternoon", "evening")}
+    if not slots:
+        return targets
+
     style = trip.preferences.travel_style.value
-    if style == "packed":
-        return 3
+    if style == "relaxed":
+        for s in slots:
+            targets[s] = 1
+        if len(slots) >= 2:
+            # Keep morning/afternoon preference, empty evening first.
+            if "evening" in slots:
+                targets["evening"] = 0
+            else:
+                targets[slots[-1]] = 0
+        return targets
+
     if style == "balanced":
-        return 2
-    return 1
+        for s in slots:
+            targets[s] = 1
+        if len(slots) >= 2:
+            slot_two = "afternoon" if "afternoon" in slots else slots[0]
+            targets[slot_two] = 2
+        return targets
+
+    # packed
+    for s in slots:
+        targets[s] = 2
+    if len(slots) >= 2:
+        slot_one = "morning" if "morning" in slots else slots[0]
+        targets[slot_one] = 1
+    return targets
 
 
 def _required_slots_for_day(trip: TripRequest, day_index: int) -> dict[str, bool]:
@@ -197,30 +229,48 @@ def _valid_days_structure(trip: TripRequest, parsed: dict | None) -> bool:
         if not isinstance(row, dict):
             return False
         req = _required_slots_for_day(trip, idx)
+        targets = _slot_item_targets(trip, req)
+        required_slots = [s for s in ("morning", "afternoon", "evening") if req[s]]
         for slot in ("morning", "afternoon", "evening"):
             items = _to_items(row.get(slot, []))
-            if req[slot] and len(items) < 1:
-                return False
+            if req[slot]:
+                if len(items) > 2:
+                    return False
+                expected = targets[slot]
+                if expected == 0 and len(items) != 0:
+                    return False
+                if expected >= 1 and len(items) < 1:
+                    return False
             if any(_looks_misaligned(slot, item) for item in items):
+                return False
+        # enforce exactly one special slot behavior for balanced/packed when >=2 slots available
+        if len(required_slots) >= 2:
+            counts = [len(_to_items(row.get(s, []))) for s in required_slots]
+            style = trip.preferences.travel_style.value
+            if style == "balanced" and counts.count(2) != 1:
+                return False
+            if style == "packed" and counts.count(1) != 1:
+                return False
+            if style == "relaxed" and counts.count(0) > 1:
                 return False
     return True
 
 
 def _basic_fallback_days(trip: TripRequest, top_activities: list[TopActivity]) -> list[dict[str, object]]:
     names_pool = [x.name for x in top_activities] or ["City center orientation walk"]
-    target = _target_items_per_slot(trip)
     normalized: list[dict[str, object]] = []
     cursor = 0
     for idx in range(1, trip.trip_length_days() + 1):
         req = _required_slots_for_day(trip, idx)
+        slot_targets = _slot_item_targets(trip, req)
         slot_rows: dict[str, list[str]] = {}
         for slot in ("morning", "afternoon", "evening"):
             if not req[slot]:
                 slot_rows[slot] = []
                 continue
-            count = min(target, len(names_pool))
+            count = min(slot_targets[slot], len(names_pool))
             slot_items: list[str] = []
-            for _ in range(max(1, count)):
+            for _ in range(max(0, count)):
                 slot_items.append(names_pool[cursor % len(names_pool)])
                 cursor += 1
             slot_rows[slot] = slot_items
@@ -239,7 +289,13 @@ def _repair_days_with_model(
     trip: TripRequest, itinerary_text: str, top_activities: list[TopActivity]
 ) -> list[dict[str, object]]:
     names = [f"{a.name} ({a.category})" for a in top_activities]
-    slot_target = _target_items_per_slot(trip)
+    style = trip.preferences.travel_style.value
+    if style == "relaxed":
+        density_rule = "0-1 per valid slot; at most one slot can be empty"
+    elif style == "balanced":
+        density_rule = "1-2 per valid slot; exactly one slot has 2, others have 1"
+    else:
+        density_rule = "1-2 per valid slot; exactly one slot has 1, others have 2"
     prompt = (
         "Rewrite this itinerary into strict JSON only with schema:\n"
         "{days:[{day:int,morning:[str],afternoon:[str],evening:[str]}],notes:[str]}\n"
@@ -248,7 +304,7 @@ def _repair_days_with_model(
         f"Departure datetime: {trip.departure_datetime.isoformat() if trip.departure_datetime else 'unspecified'}\n"
         "If day-1 has late arrival, morning/afternoon can be empty.\n"
         "If last day has early departure, afternoon/evening can be empty.\n"
-        f"For valid slots provide around {slot_target} concise items each (1 item is acceptable if options are limited).\n"
+        f"Density rule: {density_rule}.\n"
         "Do not put dinner/nightlife in morning slots.\n"
         f"Candidate activities: {', '.join(names)}\n\n"
         f"Original output:\n{itinerary_text}"
@@ -279,11 +335,11 @@ def _normalize_days(
             return _basic_fallback_days(trip, top_activities)
     names_pool = [x.name for x in top_activities]
     used_global: set[str] = set()
-    target = _target_items_per_slot(trip)
     normalized: list[dict[str, object]] = []
     for idx, row in enumerate(repaired, start=1):
         row_dict = row if isinstance(row, dict) else {}
         req = _required_slots_for_day(trip, idx)
+        slot_targets = _slot_item_targets(trip, req)
         slot_rows: dict[str, list[str]] = {}
         day_used: set[str] = set()
         for slot in ("morning", "afternoon", "evening"):
@@ -313,7 +369,7 @@ def _normalize_days(
 
             chosen = preferred[:]
             for candidate in names_pool:
-                if len(chosen) >= target:
+                if len(chosen) >= slot_targets[slot]:
                     break
                 key = candidate.lower()
                 if key in used_global or key in day_used or any(x.strip().lower() == key for x in chosen):
@@ -321,21 +377,21 @@ def _normalize_days(
                 chosen.append(candidate)
 
             # If still short (small pool), allow repeats as a last resort.
-            if len(chosen) < max(1, target):
+            if len(chosen) < max(0, slot_targets[slot]):
                 for item in repeated:
-                    if len(chosen) >= target:
+                    if len(chosen) >= slot_targets[slot]:
                         break
                     key = item.strip().lower()
                     if key not in day_used and not any(x.strip().lower() == key for x in chosen):
                         chosen.append(item)
                 for candidate in names_pool:
-                    if len(chosen) >= target:
+                    if len(chosen) >= slot_targets[slot]:
                         break
                     key = candidate.lower()
                     if key in day_used or any(x.strip().lower() == key for x in chosen):
                         continue
                     chosen.append(candidate)
-            slot_rows[slot] = chosen[: max(1, target)]
+            slot_rows[slot] = chosen[: max(0, slot_targets[slot])]
             for item in slot_rows[slot]:
                 key = item.strip().lower()
                 if key:

@@ -354,19 +354,6 @@ export default function App() {
                 </ul>
               </div>
 
-              <h3>Top Activity Picks</h3>
-              <ul className="activity-list">
-                {result.topActivities.map((activity) => (
-                  <li key={`${activity.name}-${activity.category}`}>
-                    <strong>{activity.name}</strong>
-                    <span>
-                      {activity.category}
-                      {activity.neighborhood ? ` · ${activity.neighborhood}` : ""}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-
               <div className="explanation-box">
                 <h3>Refine This Plan</h3>
                 <textarea
