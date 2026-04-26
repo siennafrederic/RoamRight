@@ -21,7 +21,7 @@ For full setup details, see `SETUP.md`.
 ## Video Links
 
 - Product demo: [https://youtu.be/HuQ-anUlhQI](https://youtu.be/HuQ-anUlhQI)
-- Technical walkthrough: _TBD (add final link in `videos/TechnicalWalkthrough.md`)_
+- Technical walkthrough: _TBD (will add final link in `videos/TechnicalWalkthrough.md`)_
 
 ## Evaluation
 
