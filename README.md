@@ -1,21 +1,25 @@
 # RoamRight
 
-RoamRight is a personality-aware travel planner that generates structured multi-day itineraries using a retrieval + reranking + LLM pipeline. It adapts plans to destination, travel style, local-vs-touristy preference, walking tolerance, and user refinement feedback.
+Most travel planners give one-size-fits-all itineraries, but real trips need recommendations that adapt to who you are and how you travel. RoamRight is a personality-aware travel planner that generates structured multi-day itineraries with a custom retrieval + ranking + LLM generation pipeline and adapts recommendations to destination, travel style, local-vs-touristy preference, walking tolerance, and user feedback in a multi-turn refine loop.
 
 ## What It Does
 
-RoamRight takes trip inputs from a React frontend, retrieves relevant activities from a curated attractions dataset, reranks those candidates with feature-based scoring, and generates day-by-day plans through a FastAPI backend. The system supports iterative refinement (users can provide follow-up feedback to adjust pacing/content), includes time-window handling for arrival/departure constraints, and outputs structured morning/afternoon/evening recommendations with explanation bullets.
+RoamRight takes trip inputs from a React frontend, retrieves relevant activities from a curated attractions 
+dataset, reranks those candidates with feature-based scoring, and generates day-by-day plans through a FastAPI 
+backend. The system supports iterative refinement (users can provide follow-up feedback to adjust pacing/content), 
+includes time-window handling for arrival/departure constraints, and outputs structured morning/afternoon/evening 
+recommendations with explanation bullets.
 
 ## Quick Start
 
-For full setup details, see `SETUP.md`.
+For full setup details, see `docs/SETUP.md`.
 
-1. Install dependencies: `pip install -r requirements.txt`
+1. Install Python dependencies: `pip install -r requirements.txt`
 2. Start backend API: `uvicorn ui.api_server:app --reload --host 127.0.0.1 --port 8000`
 3. Start frontend:
-   - `cd frontend`
-   - `npm install`
-   - `npm run dev`
+  - `cd frontend`
+  - `npm install`
+  - `npm run dev`
 4. Open the Vite URL shown in terminal (usually `http://localhost:5173`).
 
 ## Video Links
@@ -25,9 +29,9 @@ For full setup details, see `SETUP.md`.
 
 ## Evaluation
 
-Evaluation artifacts and results:
+Primary evaluation artifacts:
 
-- `EVALUATION_ABLATION.md`
+- `docs/EVALUATION_ABLATION.md`
 - `experiments/ablation_eval_summary.md`
 - `experiments/ablation_eval_results.json`
 
@@ -42,13 +46,11 @@ Current ablation summary (12 benchmark requests):
 - `no_ranking`: relevance `0.3882`, diversity `0.4621`
 - `no_rag`: relevance `0.3439`, diversity `0.4193`
 
-## Individual Contributions
+## Submission Notes
 
-This is a single-author project submission by Sienna Frederic.
+- Solo project submission by Sienna Frederic
+- Full setup instructions: `docs/SETUP.md`
+- AI tool and development attribution: `docs/ATTRIBUTION.md`
+- Dataset construction methodology: `docs/DATASET_METHODOLOGY.md`
+- Demo Videos: `videos/`
 
-## Additional Project Notes
-
-- Setup guide: `SETUP.md`
-- Attribution: `ATTRIBUTION.md`
-- Dataset methodology: `DATASET_METHODOLOGY.md`
-- Video notes: `videos/`

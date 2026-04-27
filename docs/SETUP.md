@@ -99,37 +99,10 @@ Outputs:
 ./.venv/bin/python scripts/smoke_test_llm.py
 ```
 
-## 9) Deploy on Render (for public demo URL)
-
-This repo includes a Render blueprint at `render.yaml` that defines:
-
-- `roamright-api` (Python web service)
-- `roamright-frontend` (static site)
-
-### Deploy steps
-
-1. Push this repository to GitHub.
-2. In Render, choose **New + -> Blueprint** and connect your repo.
-3. Render will detect `render.yaml` and create both services.
-4. Once the backend service URL is available, copy it.
-5. In Render dashboard:
-   - Frontend service env var:
-     - `VITE_API_BASE_URL=https://<your-backend>.onrender.com`
-   - Backend service env vars:
-     - `CORS_ALLOW_ORIGINS=https://<your-frontend>.onrender.com`
-     - `LLM_API_KEY=<your_api_key>`
-6. Redeploy both services and test:
-   - `https://<your-backend>.onrender.com/api/health`
-   - `https://<your-frontend>.onrender.com`
-
-Notes:
-
-- Free-tier cold starts can add response latency.
-- Keep secrets only in Render environment variables, not in git-tracked files.
-
 ## Common Troubleshooting
 
 - **Import errors**: ensure virtual environment is activated and `pip install -r requirements.txt` completed.
 - **Frontend cannot reach backend**: ensure backend is running on port `8000` and frontend on `5173`.
 - **LLM call failures**: verify `.env` provider settings and API key/base URL.
 - **Slow first run**: sentence-transformer model download can take time on first use.
+
