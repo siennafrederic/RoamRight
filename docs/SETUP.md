@@ -11,7 +11,7 @@ This guide provides step-by-step instructions to run RoamRight locally.
 ## 1) Clone and enter the project
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/siennafrederic/RoamRight.git
 cd RoamRight
 ```
 
