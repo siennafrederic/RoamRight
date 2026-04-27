@@ -10,6 +10,10 @@ backend. The system supports iterative refinement (users can provide follow-up f
 includes time-window handling for arrival/departure constraints, and outputs structured morning/afternoon/evening 
 recommendations with explanation bullets.
 
+## Current City Coverage
+
+RoamRight currently supports trip generation for these 8 cities in the dataset: Madrid, Barcelona, Valencia, Sevilla, Paris, London, Rome, and Florence. For best results during testing/grading, please use one of these cities.
+
 ## Quick Start
 
 For full setup details, see `docs/SETUP.md`.
